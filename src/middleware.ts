@@ -1,8 +1,9 @@
-import { auth, clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 export default clerkMiddleware(async (auth, req, next) => {
   const protectedRoutes = createRouteMatcher([
-    "/",
+    "/dashboard",
+    "/dashboard/(.*)",
     // If want to protected all child url, for example /dashboard , do "/dashboard/(.*)"
   ]);
 
