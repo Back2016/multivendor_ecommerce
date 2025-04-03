@@ -1,6 +1,21 @@
+// Metadata
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+
+import { ThemeProvider } from "next-themes";
+
+// Font
+import { Geist, Geist_Mono, Barlow } from "next/font/google";
+
+// Global css
 import "./globals.css";
+
+// Note *1
+const barlow = Barlow({
+  variable: "--font-barlow",
+  subsets: ["latin"],
+  weight: ["500", "700"],
+});
+// Note *1 end
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +38,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        // Note *1
+        className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
