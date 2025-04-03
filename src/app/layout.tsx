@@ -1,7 +1,11 @@
 // Metadata
 import type { Metadata } from "next";
 
+// Theme provider
 import { ThemeProvider } from "next-themes";
+
+// Clerk provider
+import { ClerkProvider } from "@clerk/nextjs";
 
 // Font
 import { Geist, Geist_Mono, Barlow } from "next/font/google";
@@ -38,20 +42,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
-      <body
-        // Note *1
-        className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} antialiased`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+    <ClerkProvider>
+      <html lang="en" className="light" style={{ colorScheme: 'light' }}>
+        <body
+          // Note *1
+          className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} antialiased`}
         >
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
