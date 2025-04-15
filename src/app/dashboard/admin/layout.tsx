@@ -16,7 +16,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
         <div className="w-full h-full">
             {/* Sidebar */}
             <Sidebar isAdmin/>
-            <div className="w-full ml-[300px]">
+            <div className="ml-[300px]">
                 {/* Header */}
                 <Header />
                 <div className="w-full mt-[75px] p-4">

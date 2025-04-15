@@ -199,6 +199,8 @@ export async function POST(req: Request) {
             });
         }
 
+        console.log("DB updated successful");
+
         return new Response("Webhook received", { status: 200 });
     }
 
