@@ -6,6 +6,8 @@ import Image from "next/image";
 
 // Cloudinary
 import { CldUploadWidget } from "next-cloudinary";
+import { Button } from "@/components/ui/button";
+import { Trash } from "lucide-react";
 
 interface ImageUploadProps {
     disabled?: boolean;
@@ -19,6 +21,7 @@ interface ImageUploadProps {
 const ImageUpload: FC<ImageUploadProps> = ({
     disabled,
     onChange,
+    onRemove,
     value,
     type,
     dontShowPreview,
@@ -158,7 +161,68 @@ const ImageUpload: FC<ImageUploadProps> = ({
         );
     } else {
         return (
-            <div></div>
+            <div>
+                <div className="mb-4 flex items-center gap-4">
+                    {value.length > 0 && !dontShowPreview &&
+                        value.map((imageUrl) => (
+                            <div key={imageUrl} className="relative w-[200px] min-h-[100px] max-h-[200px]">
+                                {/* Delete image button */}
+                                <div className="z-10 absolute top-2 right-2">
+                                    <Button
+                                        onClick={() => onRemove(imageUrl)}
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        className="rounded-full">
+                                        <Trash className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                {/* Image */}
+                                <Image fill className="object-cover rounded-md" alt="" src={imageUrl} />
+                            </div>
+                        ))}
+                </div>
+                <div style={{ pointerEvents: "auto" }}>
+                    <CldUploadWidget
+                        uploadPreset={cloudinary_preset}
+                        onSuccess={onUpload}
+                        onClose={() => {
+                            // Restore the pointer events (adjust as needed)
+                            document.body.style.pointerEvents = "";
+                        }}
+                    >
+                        {({ open }) => {
+                            const onClick = () => {
+                                document.body.style.pointerEvents = "auto";
+                                open();
+                            };
+
+                            return (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="flex items-center font-medium text-[17px] py-3 px-6 text-white bg-gradient-to-t from-[var(--blue-primary)] to-blue-300 border-none shadow-lg rounded-full hover:shadow-md active:shadow-sm"
+                                        disabled={disabled}
+                                        onClick={onClick}
+                                    >
+                                        <svg
+                                            viewBox="0 0 640 512"
+                                            fill="white"
+                                            height="1em"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-2"
+                                        >
+                                            <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-217c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l39-39V392c0 13.3 10.7 24 24 24s24-10.7 24-24V257.9l39 39c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-80-80c-9.4-9.4-24.6-9.4-33.9 0l-80 80z" />
+                                        </svg>
+                                        <span>Upload images</span>
+                                    </button>
+                                </>
+                            );
+                        }}
+                    </CldUploadWidget>
+                </div>
+            </div>
+
         );
     }
 }

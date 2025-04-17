@@ -1,0 +1,617 @@
+"use client";
+
+// Prisma model
+import { Category, SubCategory } from "@prisma/client";
+
+
+// React
+import { FC, useCallback, useEffect, useState, useRef, useMemo } from "react";
+
+// Form handling utilities
+import * as z from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// Schema
+import { ProductFormSchema } from "@/lib/schemas";
+
+// shadcn/ui
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import ImageUpload from "../shared/image-upload";
+
+// Queries
+import { upsertProduct } from "@/queries/product";
+import { getAllSubCategoriesForCategory } from "@/queries/category";
+
+// ReactTags
+import { WithOutContext as ReactTags } from "react-tag-input";
+
+// Utils
+import { v4 } from "uuid";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+
+// Type
+import { ProductWithVariantType } from "@/lib/types";
+
+import ImagesPreviewGrid from "../shared/images-preview-grid";
+import ClickToAddInputs from "./click-to-add";
+
+// Jodit text editor
+import JoditEditor from "jodit-react";
+import InputFieldset from "../shared/input-fieldset";
+import { useTheme } from "next-themes";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+
+
+interface ProductDetailsProps {
+    data?: ProductWithVariantType;
+    categories: Category[];
+    storeUrl: string;
+}
+
+const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl }) => {
+    const router = useRouter(); // Hook for routing
+
+    // Is new variant page
+    const isNewVariantPage = data?.productId && !data?.variantId;
+
+    // Jodit editor refs
+    const productDescEditor = useRef(null);
+    const variantDescEditor = useRef(null);
+
+    // Jodit configuration
+    const { theme } = useTheme();
+
+    const config = useMemo(
+        () => ({
+            theme: theme === "dark" ? "dark" : "default",
+        }),
+        [theme]
+    );
+
+    // State for subCategories
+    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+
+    // State for colors
+    const [colors, setColors] = useState<{ color: string }[]>(
+        data?.colors || [{ color: "" }]
+    );
+
+    // Temporary state for images
+    const [images, setImages] = useState<{ url: string }[]>([]);
+
+    // State for sizes
+    const [sizes, setSizes] = useState<
+        { size: string; price: number; quantity: number; discount?: number }[]
+    >(data?.sizes || [{ size: "", quantity: 1, price: 0.01, discount: 0 }]);
+
+    type Probe = z.infer<typeof ProductFormSchema>;
+
+    // Form hook for managing form state and validation
+    const form = useForm<z.infer<typeof ProductFormSchema>>({
+        mode: "onChange",
+        resolver: zodResolver(ProductFormSchema),
+        defaultValues: {
+            name: data?.name ?? "",
+            description: data?.description ?? "",
+            variantName: data?.variantName ?? "",
+            variantDescription: data?.variantDescription ?? "",
+            images: data?.images || [],
+            categoryId: data?.categoryId ?? "",
+            subCategoryId: data?.subCategoryId ?? "",
+            brand: data?.brand ?? "",
+            sku: data?.sku ?? "",
+            colors: data?.colors || [{ color: "" }],
+            sizes:
+                data?.sizes?.map((s) => ({ ...s, discount: s.discount ?? 0 })) ?? [
+                    { size: "", quantity: 1, price: 0.01, discount: 0 },
+                ],
+            keywords: data?.keywords || [],
+            isSale: data?.isSale ?? false,
+        },
+    });
+
+    // UseEffect to get subCategories when user pick/change a category
+    useEffect(() => {
+        const getSubCategories = async () => {
+            const res = await getAllSubCategoriesForCategory(form.watch().categoryId);
+            setSubCategories(res);
+        };
+        getSubCategories();
+    }, [form.watch().categoryId]);
+
+    // Extract errors state from form
+    const errors = form.formState.errors;
+    console.log("errors", errors);
+
+    // Loading status based on form submission
+    const isLoading = form.formState.isSubmitting;
+
+    // Always show lastest data
+    useEffect(() => {
+        if (data) {
+            form.reset(data)
+        }
+    }, [data, form]);
+
+    // Submit handler for form submission
+    const handleSubmit = async (values: z.infer<typeof ProductFormSchema>) => {
+        console.log("VALUES SENT TO SERVER", values); // Debuging line
+        try {
+            // Upserting store data
+            const response = await upsertProduct({
+                productId: data?.productId ? data.productId : v4(),
+                variantId: data?.variantId ? data.variantId : v4(),
+                name: values.name,
+                description: values.description,
+                variantName: values.variantName,
+                variantDescription: values.variantDescription || "",
+                categoryId: values.categoryId,
+                subCategoryId: values.subCategoryId,
+                images: values.images,
+                isSale: values.isSale,
+                brand: values.brand,
+                sku: values.sku,
+                colors: values.colors,
+                sizes: values.sizes,
+                keywords: values.keywords,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            }, storeUrl);
+
+            toast(data?.productId && data?.variantId
+                ? "Product has been updated."
+                : `Congratulations! product '${response?.slug}' is now created.`);
+
+            // Redirect or Refresh data
+            if (data?.productId && data?.variantId) {
+                router.refresh();
+            } else {
+                router.push(`/dashboard/seller/stores/${storeUrl}/products`);
+            }
+        } catch (error: any) {
+            // Handling form submission errors
+            console.log(error);
+            toast.error("Oops!", {
+                description: error.toString(),
+            });
+        }
+    }
+
+    // Handle keywords input
+    const [keywords, setKeywords] = useState<string[]>(data?.keywords || []);
+
+    interface Keyword {
+        id: string;
+        text: string;
+    }
+
+    const handleAddition = (keyword: Keyword) => {
+        if (keywords.length === 10) return;
+        setKeywords([...keywords, keyword.text]);
+    };
+
+    const handleDeleteKeyword = (i: number) => {
+        setKeywords(keywords.filter((_, index) => index !== i));
+    };
+
+    // Whenever colors, sizes, keywords changes we update the form values
+    useEffect(() => {
+        form.setValue("colors", colors || []);
+        form.setValue("sizes", sizes || []);
+        form.setValue("keywords", keywords || []);
+    }, [colors, sizes, keywords, form]);
+
+    // console.log("form sizes", form.watch().sizes);
+
+    return (
+        <AlertDialog>
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle>Product Information</CardTitle>
+                    <CardDescription>
+                        {data?.productId && data.variantId
+                            ? `Update ${data?.name} product information.`
+                            : " Lets create a product. You can edit product later from the product page."}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...form}>
+                        <form
+                            //@ts-ignore
+                            onSubmit={form.handleSubmit(handleSubmit)}
+                            className="space-y-4"
+                        >
+                            {/* Images - Colors */}
+                            <div className="flex flex-col gap-y-6 xl:flex-row">
+                                {/* Images */}
+                                <FormField
+                                    control={form.control}
+                                    name="images"
+                                    render={({ field }) => {
+                                        return (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <div>
+                                                        <ImagesPreviewGrid
+                                                            images={form.getValues().images}
+                                                            onRemove={(url) => {
+                                                                const updatedImages = images.filter(
+                                                                    (img) => img.url !== url
+                                                                );
+                                                                setImages(updatedImages);
+                                                                field.onChange(updatedImages);
+                                                            }}
+                                                            colors={colors}
+                                                            setColors={setColors}
+                                                        />
+                                                        <FormMessage className="!mt-4" />
+                                                        <ImageUpload
+                                                            dontShowPreview
+                                                            type="standard"
+                                                            value={field.value.map((image) => image.url)}
+                                                            disabled={isLoading}
+                                                            onChange={(url) => {
+                                                                setImages((prevImages) => {
+                                                                    const updatedImages = [...prevImages, { url }];
+                                                                    // Defer the form update to the next tick so it's not in the same render phase
+                                                                    setTimeout(() => {
+                                                                        field.onChange(updatedImages);
+                                                                    }, 0);
+                                                                    return updatedImages;
+                                                                });
+                                                            }}
+                                                            onRemove={(url) =>
+                                                                field.onChange([
+                                                                    ...field.value.filter(
+                                                                        (current) => current.url !== url
+                                                                    ),
+                                                                ])
+                                                            }
+                                                        />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        );
+                                    }}
+                                />
+                                {/* Colors */}
+                                <div className="w-full flex flex-col gap-y-3 xl:pl-5">
+                                    <ClickToAddInputs
+                                        details={data?.colors || colors}
+                                        setDetails={setColors}
+                                        initialDetail={{ color: "" }}
+                                        header="Colors"
+                                        colorPicker
+                                    />
+                                    {errors.colors && (
+                                        <span className="text-sm font-medium text-destructive">
+                                            {errors.colors.message}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            {/* Name */}
+                            <InputFieldset label="Name">
+                                <div className="flex flex-col lg:flex-row gap-4">
+                                    {!isNewVariantPage && (
+                                        <FormField
+                                            control={form.control}
+                                            name="name"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormControl>
+                                                        <Input placeholder="Product name" {...field} disabled={isLoading} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                    <FormField
+                                        control={form.control}
+                                        name="variantName"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormControl>
+                                                    <Input placeholder="Variant name" {...field} disabled={isLoading} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </InputFieldset>
+                            {/* Product and variant description editors (tabs) */}
+                            <InputFieldset
+                                label="Description"
+                                description={
+                                    isNewVariantPage
+                                        ? ""
+                                        : "Note: The product description is the main description for the product (Will display in every variant page). You can add an extra description specific to this variant using 'Variant description' tab."
+                                }
+                            >
+                                <Tabs
+                                    defaultValue={isNewVariantPage ? "variant" : "product"}
+                                    className="w-full"
+                                >
+                                    {!isNewVariantPage && (
+                                        <TabsList className="w-full grid grid-cols-2">
+                                            <TabsTrigger value="product">
+                                                Product description
+                                            </TabsTrigger>
+                                            <TabsTrigger value="variant">
+                                                Variant description
+                                            </TabsTrigger>
+                                        </TabsList>
+                                    )}
+                                    <TabsContent value="product">
+                                        <FormField
+                                            disabled={isLoading}
+                                            control={form.control}
+                                            name="description"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormControl>
+                                                        <JoditEditor
+                                                            ref={productDescEditor}
+                                                            config={config}
+                                                            value={form.getValues().description}
+                                                            onChange={(content) => {
+                                                                form.setValue("description", content);
+                                                            }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TabsContent>
+                                    <TabsContent value="variant">
+                                        <FormField
+                                            disabled={isLoading}
+                                            control={form.control}
+                                            name="variantDescription"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormControl>
+                                                        <JoditEditor
+                                                            ref={variantDescEditor}
+                                                            config={config}
+                                                            value={form.getValues().variantDescription || ""}
+                                                            onChange={(content) => {
+                                                                form.setValue("variantDescription", content);
+                                                            }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TabsContent>
+                                </Tabs>
+                            </InputFieldset>
+                            {/* Keywords*/}
+                            <div className="flex items-center gap-10 py-14">
+                                {/* Keywords */}
+                                <div className="w-full flex-1 space-y-3">
+                                    <FormField
+                                        control={form.control}
+                                        name="keywords"
+                                        render={({ field }) => (
+                                            <FormItem className="relative flex-1">
+                                                <FormLabel>Product Keywords</FormLabel>
+                                                <FormControl>
+                                                    <ReactTags
+                                                        handleAddition={handleAddition}
+                                                        handleDelete={() => {}}
+                                                        placeholder="Keywords (e.g., winter jacket) — press Enter to add"
+                                                        classNames={{
+                                                            tagInputField:
+                                                                "bg-background border rounded-md p-2 w-full focus:outline-none",
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="flex flex-wrap gap-1">
+                                        {keywords.map((k, i) => (
+                                            <div
+                                                key={i}
+                                                className="text-xs inline-flex items-center px-3 py-1 bg-blue-200 text-blue-700 rounded-full gap-x-2"
+                                            >
+                                                <span>{k}</span>
+                                                <span
+                                                    className="cursor-pointer"
+                                                    onClick={() => handleDeleteKeyword(i)}
+                                                >
+                                                    x
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Sizes*/}
+                            <InputFieldset label="Sizes, Quantities, Prices, Disocunts">
+                                <div className="w-full flex flex-col gap-y-3">
+                                    <ClickToAddInputs
+                                        details={sizes}
+                                        setDetails={setSizes}
+                                        initialDetail={{
+                                            size: "",
+                                            quantity: 1,
+                                            price: 0.01,
+                                            discount: 0,
+                                        }}
+                                        containerClassName="flex-1"
+                                        inputClassName="w-full"
+                                    />
+                                    {errors.sizes && (
+                                        <span className="text-sm font-medium text-destructive">
+                                            {errors.sizes.message}
+                                        </span>
+                                    )}
+                                </div>
+                            </InputFieldset>
+                            {/* Category - SubCategory */}
+                            {!isNewVariantPage && (
+                                <InputFieldset label="Category">
+                                    <div className="flex gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="categoryId"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <Select
+                                                        disabled={isLoading || categories.length == 0}
+                                                        onValueChange={field.onChange}
+                                                        value={field.value}
+                                                        defaultValue={field.value}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue
+                                                                    defaultValue={field.value}
+                                                                    placeholder="Select a category"
+                                                                />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {categories.map((category) => (
+                                                                <SelectItem
+                                                                    key={category.id}
+                                                                    value={category.id}
+                                                                >
+                                                                    {category.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="subCategoryId"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <Select
+                                                        disabled={
+                                                            isLoading ||
+                                                            categories.length == 0 ||
+                                                            !form.getValues().categoryId
+                                                        }
+                                                        onValueChange={field.onChange}
+                                                        value={field.value}
+                                                        defaultValue={field.value}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue
+                                                                    defaultValue={field.value}
+                                                                    placeholder="Select a sub-category"
+                                                                />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {subCategories.map((sub) => (
+                                                                <SelectItem key={sub.id} value={sub.id}>
+                                                                    {sub.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </InputFieldset>
+                            )}
+                            {/* Brand, Sku */}
+                            <InputFieldset
+                                label={isNewVariantPage ? "Sku, Weight" : "Brand, Sku, Weight"}
+                            >
+                                <div className="flex flex-col lg:flex-row gap-4">
+                                    {!isNewVariantPage && (
+                                        <FormField
+                                            control={form.control}
+                                            name="brand"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormControl>
+                                                        <Input placeholder="Product brand" {...field} disabled={isLoading}/>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                    <FormField
+                                        control={form.control}
+                                        name="sku"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormControl>
+                                                    <Input placeholder="Product sku" {...field} disabled={isLoading}/>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </InputFieldset>
+                            {/* Is On Sale */}
+                            <FormField
+                                control={form.control}
+                                name="isSale"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                // @ts-ignore
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        <div className="space-y-1 leading-none">
+                                            <FormLabel>On Sale</FormLabel>
+                                            <FormDescription>
+                                                Is the product on sale?
+                                            </FormDescription>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
+
+
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading
+                                    ? "loading..."
+                                    : data?.productId && data.variantId
+                                        ? "Save product information"
+                                        : "Create product"}
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </AlertDialog>
+    );
+};
+
+export default ProductDetails;

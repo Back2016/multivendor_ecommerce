@@ -35,6 +35,7 @@ model Category {
   featured Boolean @default(false)
 
   subCategories SubCategory[] @relation("CategoryToSubcategory")
+  products      Product[]     @relation("CategoryToProduct")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -48,7 +49,8 @@ model SubCategory {
   featured Boolean @default(false)
 
   categoryId String
-  category   Category @relation("CategoryToSubcategory", fields: [categoryId], references: [id])
+  category   Category  @relation("CategoryToSubcategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  products   Product[] @relation("SubCategoryToProduct")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,9 +86,101 @@ model Store {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  userId     String
-  user       User    @relation("UserStores", fields: [userId], references: [id])
-  categoryId String?
+  userId   String
+  user     User      @relation("UserStores", fields: [userId], references: [id], onDelete: Cascade)
+  products Product[] @relation("StoreToProduct")
 
   @@index([userId])
+}
+
+model Product {
+  id          String @id @default(uuid())
+  name        String
+  description String
+  slug        String @unique
+  brand       String
+  rating      Float  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  storeId String
+  store   Store  @relation("StoreToProduct", fields: [storeId], references: [id])
+
+  variants ProductVariant[] @relation("ProductToProductVariant")
+
+  categoryId String
+  category   Category @relation("CategoryToProduct", fields: [categoryId], references: [id])
+
+  subCategoryId String
+  subCategory   SubCategory @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([categoryId])
+  @@index([subCategoryId])
+}
+
+model ProductVariant {
+  id                 String  @id @default(uuid())
+  variantName        String
+  variantDescription String
+  slug               String  @unique
+  isSale             Boolean @default(false)
+  keywords           String
+  sku                String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  productId String
+  product   Product @relation("ProductToProductVariant", fields: [productId], references: [id], onDelete: Cascade)
+
+  sizes  Size[]                @relation("ProductVariantSizes")
+  images ProductVariantImage[] @relation("ProductVariantToVariantImage")
+  colors Color[]               @relation("ProductVariantColors")
+
+  @@index([productId])
+}
+
+model Size {
+  id       String @id @default(uuid())
+  size     String
+  quantity Int
+  price    Float
+  discount Float  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  productVariantId String
+  productVariant   ProductVariant @relation("ProductVariantSizes", fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productVariantId])
+}
+
+model ProductVariantImage {
+  id  String @id @default(uuid())
+  url String
+  alt String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  productVariantId String
+  productVariant   ProductVariant @relation("ProductVariantToVariantImage", fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productVariantId])
+}
+
+model Color {
+  id   String @id @default(uuid())
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  productVariantId String
+  productVariant   ProductVariant @relation("ProductVariantColors", fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productVariantId])
 }
