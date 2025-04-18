@@ -34,7 +34,10 @@ export type ProductWithVariantType = {
   sku: string;
   colors: { color: string }[];
   sizes: { size: string; quantity: number; price: number; discount?: number }[];
+  product_specs: { id?: string; name: string; value: string }[];
+  variant_specs: { id?: string; name: string; value: string }[];
   keywords: string[];
+  questions: { id?: string; question: string; answer: string }[];
   createdAt: Date;
   updatedAt: Date;
 }

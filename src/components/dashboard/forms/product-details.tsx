@@ -18,7 +18,7 @@ import { ProductFormSchema } from "@/lib/schemas";
 // shadcn/ui
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -103,7 +103,22 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
         { size: string; price: number; quantity: number; discount?: number }[]
     >(data?.sizes || [{ size: "", quantity: 1, price: 0.01, discount: 0 }]);
 
-    type Probe = z.infer<typeof ProductFormSchema>;
+    // State for product specs
+    const [productSpecs, setProductSpecs] = useState<
+        { name: string; value: string }[]
+    >(data?.product_specs || [{ name: "", value: "" }]);
+
+    // State for product variant specs
+    const [variantSpecs, setVariantSpecs] = useState<
+        { name: string; value: string }[]
+    >(data?.variant_specs || [{ name: "", value: "" }]);
+
+    // State for product variant specs
+    const [questions, setQuestions] = useState<
+        { question: string; answer: string }[]
+    >(data?.questions || [{ question: "", answer: "" }]);
+
+    // type Probe = z.infer<typeof ProductFormSchema>; // Debugging type line
 
     // Form hook for managing form state and validation
     const form = useForm<z.infer<typeof ProductFormSchema>>({
@@ -121,15 +136,20 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
             brand: data?.brand ?? "",
             sku: data?.sku ?? "",
             colors: data?.colors || [{ color: "" }],
-            sizes:
-                data?.sizes?.map((s) => ({ ...s, discount: s.discount ?? 0 })) ?? [
-                    { size: "", quantity: 1, price: 0.01, discount: 0 },
-                ],
+            sizes: data?.sizes,
+            product_specs: data?.product_specs,
+            variant_specs: data?.variant_specs,
             keywords: data?.keywords || [],
+            questions: data?.questions,
             isSale: data?.isSale ?? false,
             saleEndDate: data?.saleEndDate || format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
         },
     });
+
+    //              sizes:
+    // data?.sizes?.map((s) => ({ ...s, discount: s.discount ?? 0 })) ?? [
+    //     { size: "", quantity: 1, price: 0.01, discount: 0 },
+    // ],
 
     const saleEndDate = form.getValues().saleEndDate || new Date().toISOString();
 
@@ -152,12 +172,13 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
             const res = await getAllSubCategoriesForCategory(form.watch().categoryId);
             setSubCategories(res);
         };
+        form.setValue("subCategoryId", "");
         getSubCategories();
     }, [form.watch().categoryId]);
 
     // Extract errors state from form
     const errors = form.formState.errors;
-    // console.log("errors", errors);
+    console.log("errors", errors);
 
     // Loading status based on form submission
     const isLoading = form.formState.isSubmitting;
@@ -192,7 +213,10 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
                 sku: values.sku,
                 colors: values.colors,
                 sizes: values.sizes,
+                product_specs: values.product_specs,
+                variant_specs: values.variant_specs,
                 keywords: values.keywords,
+                questions: values.questions,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             }, storeUrl);
@@ -238,7 +262,10 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
         form.setValue("colors", colors || []);
         form.setValue("sizes", sizes || []);
         form.setValue("keywords", keywords || []);
-    }, [colors, sizes, keywords, form]);
+        form.setValue("product_specs", productSpecs);
+        form.setValue("variant_specs", variantSpecs);
+        form.setValue("questions", questions);
+    }, [colors, sizes, keywords, productSpecs, variantSpecs, questions, data]);
 
     // console.log("form sizes", form.watch().sizes);
 
@@ -526,6 +553,71 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
                                     )}
                                 </div>
                             </InputFieldset>
+                            {/* Product and variant specs*/}
+                            <InputFieldset
+                                label="Specifications"
+                                description={
+                                    isNewVariantPage
+                                        ? ""
+                                        : "Note: The product specifications are the main specs for the product (Will display in every variant page). You can add extra specs specific to this variant using 'Variant Specifications' tab. (But at least add one spec for product and variant.)"
+                                }
+                                className="w-1/2"
+                            >
+                                <Tabs
+                                    defaultValue={
+                                        isNewVariantPage ? "variantSpecs" : "productSpecs"
+                                    }
+                                >
+                                    {!isNewVariantPage && (
+                                        <TabsList className="w-full grid grid-cols-2">
+                                            <TabsTrigger value="productSpecs">
+                                                Product Specifications
+                                            </TabsTrigger>
+                                            <TabsTrigger value="variantSpecs">
+                                                Variant Specifications
+                                            </TabsTrigger>
+                                        </TabsList>
+                                    )}
+                                    <TabsContent value="productSpecs">
+                                        <div className="w-full flex flex-col gap-y-3">
+                                            <ClickToAddInputs
+                                                details={productSpecs}
+                                                setDetails={setProductSpecs}
+                                                initialDetail={{
+                                                    name: "",
+                                                    value: "",
+                                                }}
+                                                containerClassName="flex-1"
+                                                inputClassName="w-full"
+                                            />
+                                            {errors.product_specs && (
+                                                <span className="text-sm font-medium text-destructive">
+                                                    {errors.product_specs.message}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TabsContent>
+                                    <TabsContent value="variantSpecs">
+                                        <div className="w-full flex flex-col gap-y-3">
+                                            <ClickToAddInputs
+                                                details={variantSpecs}
+                                                setDetails={setVariantSpecs}
+                                                initialDetail={{
+                                                    name: "",
+                                                    value: "",
+                                                }}
+                                                containerClassName="flex-1"
+                                                inputClassName="w-full"
+                                            />
+                                            {errors.variant_specs && (
+                                                <span className="text-sm font-medium text-destructive">
+                                                    {errors.variant_specs.message}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
+                            </InputFieldset>
                             {/* Category - SubCategory */}
                             {!isNewVariantPage && (
                                 <InputFieldset label="Category">
@@ -635,6 +727,28 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
                                     />
                                 </div>
                             </InputFieldset>
+                            {/* Questions*/}
+                            {!isNewVariantPage && (
+                                <InputFieldset label="Questions & Answers">
+                                    <div className="w-full flex flex-col gap-y-3">
+                                        <ClickToAddInputs
+                                            details={questions}
+                                            setDetails={setQuestions}
+                                            initialDetail={{
+                                                question: "",
+                                                answer: "",
+                                            }}
+                                            containerClassName="flex-1"
+                                            inputClassName="w-full"
+                                        />
+                                        {errors.questions && (
+                                            <span className="text-sm font-medium text-destructive">
+                                                {errors.questions.message}
+                                            </span>
+                                        )}
+                                    </div>
+                                </InputFieldset>
+                            )}
                             {/* Is On Sale */}
                             <InputFieldset
                                 label="Sale"
@@ -718,6 +832,9 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, storeUrl })
                                     )}
                                 </div>
                             </InputFieldset>
+                            <div className="text-red-500 text-sm font-medium">
+                                {Object.values(errors)[0]?.message || ""}
+                            </div>
                             <Button type="submit" disabled={isLoading}>
                                 {isLoading
                                     ? "loading..."

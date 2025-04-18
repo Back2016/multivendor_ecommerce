@@ -107,7 +107,9 @@ model Product {
   storeId String
   store   Store  @relation("StoreToProduct", fields: [storeId], references: [id])
 
-  variants ProductVariant[] @relation("ProductToProductVariant")
+  variants  ProductVariant[] @relation("ProductToProductVariant")
+  specs     Spec[]           @relation("ProductSpec")
+  questions Question[]       @relation("ProductQuestion")
 
   categoryId String
   category   Category @relation("CategoryToProduct", fields: [categoryId], references: [id])
@@ -123,7 +125,7 @@ model Product {
 model ProductVariant {
   id                 String  @id @default(uuid())
   variantName        String
-  variantDescription String?  @db.LongText
+  variantDescription String? @db.LongText
   variantImage       String
   slug               String  @unique
   isSale             Boolean @default(false)
@@ -140,6 +142,7 @@ model ProductVariant {
   sizes  Size[]                @relation("ProductVariantSizes")
   images ProductVariantImage[] @relation("ProductVariantToVariantImage")
   colors Color[]               @relation("ProductVariantColors")
+  specs  Spec[]                @relation("ProductVariantSpec")
 
   @@index([productId])
 }
@@ -185,4 +188,37 @@ model Color {
   productVariant   ProductVariant @relation("ProductVariantColors", fields: [productVariantId], references: [id], onDelete: Cascade)
 
   @@index([productVariantId])
+}
+
+model Spec {
+  id    String @id @default(uuid())
+  name  String
+  value String
+
+  productId String?
+  product   Product? @relation("ProductSpec", fields: [productId], references: [id], onDelete: Cascade)
+
+  variantId String?
+  variant   ProductVariant? @relation("ProductVariantSpec", fields: [variantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([productId])
+  @@index([variantId])
+}
+
+model Question {
+  id String @id @default(uuid())
+
+  question String
+  answer   String
+
+  productId String
+  product   Product @relation("ProductQuestion", fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([productId])
 }
