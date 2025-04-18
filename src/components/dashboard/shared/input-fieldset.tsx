@@ -18,7 +18,7 @@ export default function InputFieldset({
           <FormLabel>{label}</FormLabel>
         </legend>
         {description && (
-          <p className="text-sm text-main-secondary dark:text-gray-400 pb-3 flex">
+          <p className="text-sm text-main-secondary dark:text-gray-400 pb-3 flex font-medium">
             <Dot className="-me-1" />
             {description}
           </p>

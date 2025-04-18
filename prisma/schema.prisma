@@ -49,7 +49,7 @@ model SubCategory {
   featured Boolean @default(false)
 
   categoryId String
-  category   Category  @relation("CategoryToSubcategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  category   Category  @relation("CategoryToSubcategory", fields: [categoryId], references: [id])
   products   Product[] @relation("SubCategoryToProduct")
 
   createdAt DateTime @default(now())
@@ -96,7 +96,7 @@ model Store {
 model Product {
   id          String @id @default(uuid())
   name        String
-  description String
+  description String @db.LongText
   slug        String @unique
   brand       String
   rating      Float  @default(0)
@@ -123,9 +123,11 @@ model Product {
 model ProductVariant {
   id                 String  @id @default(uuid())
   variantName        String
-  variantDescription String
+  variantDescription String?  @db.LongText
+  variantImage       String
   slug               String  @unique
   isSale             Boolean @default(false)
+  saleEndDate        String?
   keywords           String
   sku                String
 

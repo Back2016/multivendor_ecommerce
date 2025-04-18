@@ -22,6 +22,14 @@ interface ImagesPreviewGridProps {
 }
 
 const ImagesPreviewGrid: FC<ImagesPreviewGridProps> = ({ images, onRemove, colors, setColors }) => {
+    // let imagesLength;
+    // if (images) {
+    //     imagesLength = images.length;
+    // } else {
+    //     imagesLength = 0;
+    // }
+
+
     // Calculate the number of images
     let imagesLength = images.length;
 

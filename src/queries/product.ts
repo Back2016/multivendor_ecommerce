@@ -95,6 +95,7 @@ export const upsertProduct = async (
             variantDescription: product.variantDescription,
             slug: variantSlug,
             isSale: product.isSale,
+            saleEndDate: product.isSale ? product.saleEndDate : "",
             sku: product.sku,
             keywords: product.keywords.join(","),
             images: {
@@ -103,6 +104,7 @@ export const upsertProduct = async (
                     alt: img.url.split("/").pop() || "",
                 })),
             },
+            variantImage: product.variantImage,
             colors: {
                 create: product.colors.map((color) => ({
                     name: color.color,
@@ -147,167 +149,96 @@ export const upsertProduct = async (
     }
 };
 
-// const handleProductCreate = async (
-//     product: ProductWithVariantType,
-//     storeId: string
-// ) => {
-//     // Generate unique slugs for product and variant
-//     const productSlug = await generateUniqueSlug(
-//         slugify(product.name, {
-//             replacement: "-",
-//             lower: true,
-//             trim: true,
-//         }),
-//         "product"
-//     );
+// Function: getProductMainInfo
+// Description: Retrieves the main information of a specific product from the database.
+// Access Level: Public
+// Parameters:
+//   - productId: The ID of the product to be retrieved.
+// Returns: An object containing the main information of the product or null if the product is not found.
+export const getProductMainInfo = async (productId: string) => {
+    // Retrieve the product from the database
+    const product = await db.product.findUnique({
+        where: {
+            id: productId,
+        }
+    });
+    // console.log(product);
+    if (!product) return null;
 
-//     const variantSlug = await generateUniqueSlug(
-//         slugify(product.variantName, {
-//             replacement: "-",
-//             lower: true,
-//             trim: true,
-//         }),
-//         "productVariant"
-//     );
+    // Return the main information of the product
+    return {
+        productId: product.id,
+        name: product.name,
+        description: product.description,
+        brand: product.brand,
+        categoryId: product.categoryId,
+        subCategoryId: product.subCategoryId,
+        storeId: product.storeId,
+        images: []
+    };
+};
 
-//     const productData = {
-//         id: product.productId,
-//         name: product.name,
-//         description: product.description,
-//         slug: productSlug,
-//         store: { connect: { id: storeId } },
-//         category: { connect: { id: product.categoryId } },
-//         subCategory: { connect: { id: product.subCategoryId } },
-//         offerTag: { connect: { id: product.offerTagId } },
-//         brand: product.brand,
-//         specs: {
-//             create: product.product_specs.map((spec) => ({
-//                 name: spec.name,
-//                 value: spec.value,
-//             })),
-//         },
-//         questions: {
-//             create: product.questions.map((q) => ({
-//                 question: q.question,
-//                 answer: q.answer,
-//             })),
-//         },
-//         variants: {
-//             create: [
-//                 {
-//                     id: product.variantId,
-//                     variantName: product.variantName,
-//                     variantDescription: product.variantDescription,
-//                     slug: variantSlug,
-//                     variantImage: product.variantImage,
-//                     sku: product.sku,
-//                     weight: product.weight,
-//                     keywords: product.keywords.join(","),
-//                     isSale: product.isSale,
-//                     saleEndDate: product.saleEndDate,
-//                     images: {
-//                         create: product.images.map((img) => ({
-//                             url: img.url,
-//                         })),
-//                     },
-//                     colors: {
-//                         create: product.colors.map((color) => ({
-//                             name: color.color,
-//                         })),
-//                     },
-//                     sizes: {
-//                         create: product.sizes.map((size) => ({
-//                             size: size.size,
-//                             price: size.price,
-//                             quantity: size.quantity,
-//                             discount: size.discount,
-//                         })),
-//                     },
-//                     specs: {
-//                         create: product.variant_specs.map((spec) => ({
-//                             name: spec.name,
-//                             value: spec.value,
-//                         })),
-//                     },
-//                     createdAt: product.createdAt,
-//                     updatedAt: product.updatedAt,
-//                 },
-//             ],
-//         },
-//         shippingFeeMethod: product.shippingFeeMethod,
-//         freeShippingForAllCountries: product.freeShippingForAllCountries,
-//         freeShipping: product.freeShippingForAllCountries
-//             ? undefined
-//             : product.freeShippingCountriesIds &&
-//                 product.freeShippingCountriesIds.length > 0
-//                 ? {
-//                     create: {
-//                         eligibaleCountries: {
-//                             create: product.freeShippingCountriesIds.map((country) => ({
-//                                 country: { connect: { id: country.value } },
-//                             })),
-//                         },
-//                     },
-//                 }
-//                 : undefined,
-//         createdAt: product.createdAt,
-//         updatedAt: product.updatedAt,
-//     };
+// Function: getAllStoreProducts
+// Description: Retrieves all products from a specific store based on the store URL.
+// Access Level: Public
+// Parameters:
+//   - storeUrl: The URL of the store whose products are to be retrieved.
+// Returns: Array of products from the specified store, including category, subcategory, and variant details.
+export const getAllStoreProducts = async (storeUrl: string) => {
+    // Retrieve store details from the database using the store URL
+    const store = await db.store.findUnique({ where: { url: storeUrl } });
+    if (!store) throw new Error("Please provide a valid store URL.");
 
-//     const new_product = await db.product.create({ data: productData });
-//     return new_product;
-// };
+    // Retrieve all products associated with the store
+    const products = await db.product.findMany({
+        where: {
+            storeId: store.id,
+        },
+        include: {
+            category: true,
+            subCategory: true,
+            variants: {
+                include: {
+                    images: true,
+                    colors: true,
+                    sizes: true,
+                },
+            },
+            store: {
+                select: {
+                    id: true,
+                    url: true,
+                },
+            },
+        },
+    });
 
-// const handleCreateVariant = async (product: ProductWithVariantType) => {
-//     const variantSlug = await generateUniqueSlug(
-//         slugify(product.variantName, {
-//             replacement: "-",
-//             lower: true,
-//             trim: true,
-//         }),
-//         "productVariant"
-//     );
+    return products;
+};
 
-//     const variantData = {
-//         id: product.variantId,
-//         productId: product.productId,
-//         variantName: product.variantName,
-//         variantDescription: product.variantDescription,
-//         slug: variantSlug,
-//         isSale: product.isSale,
-//         saleEndDate: product.isSale ? product.saleEndDate : "",
-//         sku: product.sku,
-//         keywords: product.keywords.join(","),
-//         weight: product.weight,
-//         variantImage: product.variantImage,
-//         images: {
-//             create: product.images.map((img) => ({
-//                 url: img.url,
-//             })),
-//         },
-//         colors: {
-//             create: product.colors.map((color) => ({
-//                 name: color.color,
-//             })),
-//         },
-//         sizes: {
-//             create: product.sizes.map((size) => ({
-//                 size: size.size,
-//                 price: size.price,
-//                 quantity: size.quantity,
-//                 discount: size.discount,
-//             })),
-//         },
-//         specs: {
-//             create: product.variant_specs.map((spec) => ({
-//                 name: spec.name,
-//                 value: spec.value,
-//             })),
-//         },
-//         createdAt: product.createdAt,
-//         updatedAt: product.updatedAt,
-//     };
+// Function: deleteProduct
+// Description: Deletes a product from the database.
+// Permission Level: Seller only
+// Parameters:
+//   - productId: The ID of the product to be deleted.
+// Returns: Response indicating success or failure of the deletion operation.
+export const deleteProduct = async (productId: string) => {
+    // Get current user
+    const user = await currentUser();
 
-//     const new_variant = await db.productVariant.create({ data: variantData });
-//     return new_variant;
-// };
+    // Check if user is authenticated
+    if (!user) throw new Error("Unauthenticated.");
+
+    // Ensure user has seller privileges
+    if (user.privateMetadata.role !== "SELLER")
+        throw new Error(
+            "Unauthorized Access: Seller Privileges Required for Entry."
+        );
+
+    // Ensure product data is provided
+    if (!productId) throw new Error("Please provide product id.");
+
+    // Delete product from the database
+    const response = await db.product.delete({ where: { id: productId } });
+    return response;
+};

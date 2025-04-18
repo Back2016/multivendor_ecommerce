@@ -38,7 +38,7 @@ const ImageUpload: FC<ImageUploadProps> = ({
     }
 
     const onUpload = (result: any) => {
-        console.log("result", result);
+        // console.log("result", result);
         onChange(result.info.secure_url);
     };
 

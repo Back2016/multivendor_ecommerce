@@ -2,33 +2,33 @@ import * as z from "zod";
 
 // Category form schema
 export const CategoryFormSchema = z.object({
-    name: z.string({
-        required_error: "Category name is required.",
-        invalid_type_error: "Category name must be a string.",
-    })
-    .min(2, {message: "Category name must be at least 2 characters long."})
-    .max(50, {message: "Category name cannot exceed 50 characters."})
+  name: z.string({
+    required_error: "Category name is required.",
+    invalid_type_error: "Category name must be a string.",
+  })
+    .min(2, { message: "Category name must be at least 2 characters long." })
+    .max(50, { message: "Category name cannot exceed 50 characters." })
     .regex(/^[a-zA-Z0-9\s]+$/, {
-        message:
-            "Only letters, numbers, and spaces are allowed in the category name.",
+      message:
+        "Only letters, numbers, and spaces are allowed in the category name.",
     }),
 
-    image: z.object({
-        url: z.string(),
-    }).array().length(1, {message: "Choose a category image"}),
+  image: z.object({
+    url: z.string(),
+  }).array().length(1, { message: "Choose a category image" }),
 
-    url : z.string({
-        required_error: "Category url is required.",
-        invalid_type_error: "Category url must be a string.",
-    })
-    .min(2, {message: "Category url must be at least 2 characters long."})
-    .max(50, {message: "Category url cannot exceed 50 characters."})
+  url: z.string({
+    required_error: "Category url is required.",
+    invalid_type_error: "Category url must be a string.",
+  })
+    .min(2, { message: "Category url must be at least 2 characters long." })
+    .max(50, { message: "Category url cannot exceed 50 characters." })
     .regex(/^(?!.*(?:[-_]){2,})[a-zA-Z0-9_-]+$/, {
-        message:
-            "Only letters, numbers, hyphen, and underscore are allowed in the category name, and consecutive occurences of hyphens, underscores, or spaces are not permitted.",
+      message:
+        "Only letters, numbers, hyphen, and underscore are allowed in the category name, and consecutive occurences of hyphens, underscores, or spaces are not permitted.",
     }),
 
-    featured: z.boolean().default(false).optional(),
+  featured: z.boolean().default(false).optional(),
 
 });
 
@@ -164,6 +164,10 @@ export const ProductFormSchema = z.object({
     .array()
     .min(3, "Please upload at least 3 images for the product.")
     .max(6, "You can upload up to 6 images for the product."),
+  variantImage: z
+    .object({ url: z.string() })
+    .array()
+    .length(1, "Choose one representative image for the variant."),
   categoryId: z
     .string({
       required_error: "Product category ID is mandatory.",
@@ -176,7 +180,6 @@ export const ProductFormSchema = z.object({
       invalid_type_error: "Product sub-category ID must be a valid UUID.",
     })
     .uuid(),
-  isSale: z.boolean().default(false).optional(),
   brand: z
     .string({
       required_error: "Product brand is mandatory.",
@@ -236,4 +239,6 @@ export const ProductFormSchema = z.object({
         message: "All size inputs must be filled correctly.",
       }
     ),
+    isSale: z.boolean().default(false).optional(),
+    saleEndDate: z.string().optional(),
 });
