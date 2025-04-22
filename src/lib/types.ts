@@ -27,6 +27,7 @@ export type ProductWithVariantType = {
   variantImage: string;
   images: { url: string }[];
   categoryId: string;
+  offerTagId: string;
   subCategoryId: string;
   isSale?: boolean;
   saleEndDate?: string,

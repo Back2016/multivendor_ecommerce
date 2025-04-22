@@ -12,7 +12,6 @@ import { currentUser } from "@clerk/nextjs/server";
 // Slugify
 import slugify from "slugify";
 import { generateUniqueSlug } from "@/lib/utils";
-import { connect } from "http2";
 
 
 // Function: upsertProduct
@@ -98,6 +97,7 @@ export const upsertProduct = async (
             store: { connect: { id: store.id } },
             category: { connect: { id: product.categoryId } },
             subCategory: { connect: { id: product.subCategoryId } },
+            offerTag: { connect: { id: product.offerTagId } },
             createdAt: product.createdAt,
             updatedAt: product.updatedAt,
         };
@@ -146,6 +146,7 @@ export const upsertProduct = async (
                 ...commonVariantData,
                 product: { connect: { id: product.productId } },
             }
+            console.log("Trying to create variant.");
             return await db.productVariant.create({ data: variantData });
         } else {
             // Otherwise, create a new product with variants
@@ -159,6 +160,7 @@ export const upsertProduct = async (
                     }]
                 }
             };
+            console.log("Trying to create new product.");
             return await db.product.create({ data: productData });
         }
     } catch (error) {
@@ -178,7 +180,11 @@ export const getProductMainInfo = async (productId: string) => {
     const product = await db.product.findUnique({
         where: {
             id: productId,
-        }
+        },
+        include: {
+            questions: true,
+            specs: true,
+        },
     });
     // console.log(product);
     if (!product) return null;
@@ -191,8 +197,17 @@ export const getProductMainInfo = async (productId: string) => {
         brand: product.brand,
         categoryId: product.categoryId,
         subCategoryId: product.subCategoryId,
+        offerTagId: product.offerTagId || undefined,
         storeId: product.storeId,
-        images: []
+        questions: product.questions.map((q) => ({
+            question: q.question,
+            answer: q.answer,
+        })),
+        product_specs: product.specs.map((spec) => ({
+            name: spec.name,
+            value: spec.value,
+        })),
+        images: [],
     };
 };
 

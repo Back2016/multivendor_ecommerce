@@ -45,14 +45,16 @@ const ImageUpload: FC<ImageUploadProps> = ({
     const cloudinary_preset = process.env.NEXT_PUBLIC_CLOUDINARY_PRESET_NAME;
     if (!cloudinary_preset) return null;
 
+    const profileImg = (value.length > 0 && value[0] !== "") ? value[0] : null;
+
     if (type === "profile") {
         return (
 
             <div className="relative rounded-full w-52 h-52 bg-gray-200 border-2 border-white shadow-2xl">
                 {
-                    value.length > 0 && (
+                    profileImg && (
                         <Image
-                            src={value[0]}
+                            src={profileImg}
                             alt=""
                             width={300}
                             height={300}

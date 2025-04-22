@@ -43,6 +43,7 @@ interface DataTableProps<TData, TValue> {
   heading?: string;
   subheading?: string;
   noHeader?: true;
+  isProduct?: boolean,
 }
 
 export default function DataTable<TData, TValue>({
@@ -56,6 +57,7 @@ export default function DataTable<TData, TValue>({
   subheading,
   noHeader,
   newTabLink,
+  isProduct,
 }: DataTableProps<TData, TValue>) {
   // Modal state
   const { setOpen } = useModal();
@@ -93,6 +95,7 @@ export default function DataTable<TData, TValue>({
                 if (modalChildren)
                   setOpen(
                     <CustomModal
+                      maxWidth={isProduct? "max-w-[1000px]" : undefined}
                       heading={heading || ""}
                       subheading={subheading || ""}
                     >

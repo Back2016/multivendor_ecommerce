@@ -21,11 +21,12 @@ type Props = {
 const CustomModal = ({ children, defaultOpen, subheading, heading, maxWidth }: Props) => {
   const { isOpen, setClose } = useModal();
 
+  console.log(maxWidth);
   return (
     <Dialog open={isOpen || defaultOpen} onOpenChange={setClose}>
       <DialogContent
         className={cn(
-          "overflow-y-scroll md:max-h-[700px] md:h-fit h-screen bg-card",
+          "w-full !max-w-[90vw] md:!max-w-[1000px] max-h-[90vh] overflow-y-auto bg-card",
           maxWidth
         )}
       >

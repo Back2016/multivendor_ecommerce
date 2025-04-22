@@ -4,6 +4,7 @@ import ProductDetails from "@/components/dashboard/forms/product-details";
 // Queries
 import { getAllCategories } from "@/queries/category";
 import { getProductMainInfo } from "@/queries/product";
+import { getAllOfferTags } from "@/queries/offer-tag";
 
 export default async function SellerNewProductVariantPage({
   params,
@@ -12,10 +13,10 @@ export default async function SellerNewProductVariantPage({
 }) {
   const paramsObj = await params;
   const categories = await getAllCategories();
+  const offerTags = await getAllOfferTags();
   const product = await getProductMainInfo(paramsObj.productId);
 
-//   console.log(product);
-//   console.log("productId--->", paramsObj.productId);
+  //   console.log("productId--->", paramsObj.productId);
 
   if (!product) return null;
   return (
@@ -23,6 +24,7 @@ export default async function SellerNewProductVariantPage({
       <ProductDetails
         categories={categories}
         storeUrl={paramsObj.storeUrl}
+        offerTags={offerTags}
         data={product}
       />
     </div>
