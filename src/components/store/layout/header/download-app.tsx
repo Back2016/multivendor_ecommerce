@@ -17,7 +17,7 @@ export default function DownloadApp() {
         </span>
         <div className="ml-1">
           <b className="max-w-[90px] inline-block font-medium text-xs text-white">
-            Download the GoShop app
+            Download the NextShop app
           </b>
         </div>
       </div>
@@ -33,7 +33,7 @@ export default function DownloadApp() {
             <div className="flex">
               <div className="mx-3">
                 <h3 className="font-bold text-[20px] text-[var(--main-primary)] m-0 max-w-40 mx-auto">
-                  Download the GoShop app
+                  Download the NextShop app
                 </h3>
                 <p className="text-center"> This is a demo project (Mobile App Dev in progress) </p>
                 <div className="mt-4 flex items-center gap-x-2">

@@ -3,7 +3,7 @@ import Image from "next/image";
 import { FC } from "react";
 
 // Logo image
-import LogoImage from '../../../public/assets/icons/logo-6.png';
+import LogoImage from '../../../public/assets/icons/logo-next-blue.png';
 
 interface LogoProps {
     width: string;

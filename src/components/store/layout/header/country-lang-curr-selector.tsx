@@ -31,6 +31,7 @@ export default function CountryLanguageCurrencySelector({
   const [currentCountry, setCurrentCountry] = useState<Country>(userCountry);
   const [isSaving, setIsSaving] = useState(false);
   const [_, startTransition] = useTransition();
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
   const handleCountryClick = async (countryName: string) => {
     if (isSaving) return;                        // 1) ignore while saving
@@ -98,8 +99,8 @@ export default function CountryLanguageCurrencySelector({
             <div className="relative text-[var(--main-primary)] bg-white rounded-lg">
               <CountrySelector
                 id={"countries"}
-                open
-                onToggle={() => {}}
+                open={isSelectorOpen}
+                onToggle={() => setIsSelectorOpen(!isSelectorOpen)}
                 onChange={(val) => handleCountryClick(val)}
                 selectedValue={
                   (countries.find(

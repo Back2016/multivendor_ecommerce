@@ -36,8 +36,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GoShop | Your best online shopping choice!",
-  description: "This is a demo web app developed based on NextJS TypeScript and MySQL",
+  title: "NextShop | Your best online shopping choice!",
+  description: "This is a demo web app developed based on NextJS TypeScript Prisma and MySQL",
 };
 
 export default function RootLayout({

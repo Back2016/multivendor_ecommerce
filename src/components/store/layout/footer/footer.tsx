@@ -19,7 +19,7 @@ export default async function Footer() {
       <div className="bg-gradient-to-r from-slate-500 to-slate-800 px-2 text-white">
         <div className="max-w-[1430px] mx-auto flex items-center h-7">
           <span className="text-sm">
-            <b>© GoShop</b> - All Rights Reserved
+            <b>© NextShop</b> - All Rights Reserved
           </span>
         </div>
       </div>

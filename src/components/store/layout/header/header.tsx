@@ -1,11 +1,14 @@
 import Link from "next/link";
-// import icon from "../../../../../public/assets/icons/logo-6.png"
-// import Image from "next/image";
+import Image from "next/image";
+
 import UserMenu from "./user-menu/user-menu";
 import Cart from "./cart";
 import DownloadApp from "./download-app";
 import Search from "./search/search";
 import ThemeToggle from "@/components/shared/ThemeToggle";
+
+// Icon
+import icon from "../../../../../public/assets/icons/logo-next-narrow.png"
 
 // NextJS
 import { cookies } from "next/headers";
@@ -38,12 +41,12 @@ export default async function Header() {
                 <div className="flex lg:w-full lg:flex-1 flex-col lg:flex-row gap-3 py-3">
                     <div className="flex items-center justify-between">
                         <Link href="/">
-                            <h1 className="font-extrabold text-3xl font-mono">Go<p className="text-blue-600 inline">Shop</p></h1>
-                            {/* <Image
+                            {/* <h1 className="font-extrabold text-3xl font-mono">Go<p className="text-blue-600 inline">Shop</p></h1> */}
+                            <Image
                                 src={icon}
                                 alt="icon image"
                                 width={150}
-                                height={150} /> */}
+                                height={150} />
                         </Link>
                         <div className="flex lg:hidden">
                             <UserMenu />
