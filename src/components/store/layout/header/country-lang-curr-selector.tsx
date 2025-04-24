@@ -1,7 +1,7 @@
 "use client";
 
 // React, Next.js
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 // Icons
 import "/node_modules/flag-icons/css/flag-icons.min.css";
@@ -17,6 +17,8 @@ import CountrySelector from "@/components/shared/country-selector";
 import countries from "@/data/countries.json";
 import { useRouter } from "next/navigation";
 
+import { toast } from "sonner";
+
 export default function CountryLanguageCurrencySelector({
   userCountry,
 }: {
@@ -25,35 +27,43 @@ export default function CountryLanguageCurrencySelector({
   // Router hook for navigation
   const router = useRouter();
 
-  // State to manage countries dropdown visibility
-  const [show, setshow] = useState(false);
+  // State to manage countries dropdown visibility and applied optimistic updating
+  const [currentCountry, setCurrentCountry] = useState<Country>(userCountry);
+  const [isSaving, setIsSaving] = useState(false);
+  const [_, startTransition] = useTransition();
 
-  const handleCountryClick = async (country: string) => {
-    // Find the country data based on the selected country name
-    const countryData = countries.find((c) => c.name === country);
+  const handleCountryClick = async (countryName: string) => {
+    if (isSaving) return;                        // 1) ignore while saving
 
-    if (countryData) {
-      const data: Country = {
-        name: countryData.name,
-        code: countryData.code,
-        city: "",
-        region: "",
-      };
-      try {
-        // Send a POST request to your API endpoint to set the cookie
-        const response = await fetch("/api/setUserCountryInCookies", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({ userCountry: data }),
-        });
-        if (response.ok) {
-          router.refresh();
-        }
-      } catch (error) {
-        console.error("Error in handleCountryClick:", error);
-      }
+    const countryData = countries.find((c) => c.name === countryName);
+    if (!countryData) return;
+
+    const nextCountry: Country = {
+      name: countryData.name,
+      code: countryData.code,
+      city: "",
+      region: "",
+    };
+
+    const previousCountry = currentCountry;      // keep for rollback
+    setCurrentCountry(nextCountry);              // optimistic UI
+    setIsSaving(true);
+
+    try {
+      const res = await fetch("/api/setUserCountryInCookies", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userCountry: nextCountry }),
+      });
+      if (!res.ok) throw new Error("Network error");
+
+      startTransition(() => router.refresh());
+    } catch (err) {
+      setCurrentCountry(previousCountry);       // roll back if failed
+      console.error("Failed to set country:", err);
+      toast.error("Could not update country");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -63,11 +73,11 @@ export default function CountryLanguageCurrencySelector({
       <div>
         <div className="flex items-center h-11 py-0 px-2 cursor-pointer">
           <span className="mr-0.5  h-[33px] grid place-items-center">
-            <span className={`fi fi-${userCountry.code.toLowerCase()}`} />
+            <span className={`fi fi-${currentCountry.code.toLowerCase()}`} />
           </span>
           <div className="ml-1">
             <span className="block text-xs text-white leading-3 mt-2">
-              {userCountry.name}/EN/
+            {currentCountry.name}/EN/
             </span>
             <b className="text-xs font-bold text-white ">
               USD
@@ -88,12 +98,12 @@ export default function CountryLanguageCurrencySelector({
             <div className="relative text-[var(--main-primary)] bg-white rounded-lg">
               <CountrySelector
                 id={"countries"}
-                open={show}
-                onToggle={() => setshow(!show)}
+                open
+                onToggle={() => {}}
                 onChange={(val) => handleCountryClick(val)}
                 selectedValue={
                   (countries.find(
-                    (option) => option.name === userCountry?.name
+                    (option) => option.name === currentCountry.name
                   ) as SelectMenuOption) || countries[0]
                 }
               />
