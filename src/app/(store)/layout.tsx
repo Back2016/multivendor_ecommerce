@@ -1,6 +1,8 @@
 // React
 import { ReactNode } from "react";
 
+import "@fortawesome/fontawesome-free/css/all.min.css";
+
 // Components
 import Header from "@/components/store/layout/header/header";
 import CategoriesHeader from "@/components/store/layout/categories-header/categories-header";

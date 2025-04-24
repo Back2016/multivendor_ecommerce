@@ -4,7 +4,7 @@
 import { db } from "@/lib/db";
 
 // Types
-import { ProductWithVariantType } from "@/lib/types";
+import { ProductWithVariantType, VariantImageType, VariantSimplified } from "@/lib/types";
 
 // Clerk
 import { currentUser } from "@clerk/nextjs/server";
@@ -275,3 +275,114 @@ export const deleteProduct = async (productId: string) => {
     const response = await db.product.delete({ where: { id: productId } });
     return response;
 };
+
+
+// Function: getProducts
+// Description: Retrieves products based on various filters and returns only variants that match the filters. Supports pagination.
+// Access Level: Public
+// Parameters:
+//   - filters: An object containing filter options (category, subCategory, offerTag, size, onSale, onDiscount, brand, color).
+//   - sortBy: Sort the filtered results (Most popular, New Arrivals, Top Rated...).
+//   - page: The current page number for pagination (default = 1).
+//   - pageSize: The number of products per page (default = 10).
+// Returns: An object containing paginated products, filtered variants, and pagination metadata (totalPages, currentPage, pageSize, totalCount).
+export const getProducts = async (
+    filters: any = {},
+    sortBy: string = "",
+    page: number = 1,
+    pageSize: number = 10
+) => {
+    // Default values for page and pageSize
+    const currentPage = page;
+    const limit = pageSize;
+    const skip = (currentPage - 1) * limit; // How many products to skip (in previous pages), prisma take in skip in findMany
+
+    // Construct the base query
+    const wherClause: any = {
+        AND: [],
+    };
+
+    // Define the sort order
+    // let orderBy: Record<string, SortOrder> = {};
+    // switch (sortBy) {
+    //     case "most-popular":
+    //         orderBy = { views: "desc" };
+    //         break;
+    //     case "new-arrivals":
+    //         orderBy = { createdAt: "desc" };
+    //         break;
+    //     case "top-rated":
+    //         orderBy = { rating: "desc" };
+    //         break;
+    //     default:
+    //         orderBy = { views: "desc" };
+    // }
+
+    // Get all filtered, sorted products
+    const products = await db.product.findMany({
+        where: wherClause,
+        // orderBy,
+        take: limit, // Limit to page size
+        skip: skip, // Skip the products of previous pages
+        include: {
+            variants: {
+                include: {
+                    sizes: true,
+                    images: true,
+                    colors: true,
+                },
+            },
+        },
+    });
+
+    // Transform the products with filtered variants into ProductCardType structure
+    const productsWithFilteredVariants = products.map((product) => {
+        // Filter the variants based on the filters
+        const filteredVariants = product.variants;
+
+        // Transform the filtered variants into the VariantSimplified structure
+        const variants: VariantSimplified[] = filteredVariants.map((variant) => ({
+            variantId: variant.id,
+            variantSlug: variant.slug,
+            variantName: variant.variantName,
+            images: variant.images,
+            sizes: variant.sizes,
+        }));
+
+        // Extract variant images for the product
+        const variantImages: VariantImageType[] = filteredVariants.map(
+            (variant) => ({
+                url: `/product/${product.slug}/${variant.slug}`,
+                image: variant.variantImage
+                    ? variant.variantImage
+                    : variant.images[0].url,
+            })
+        );
+
+        // Return the product in the ProductCardType structure
+        return {
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            rating: product.rating,
+            sales: product.sales,
+            // numReviews: product.numReviews,
+            variants,
+            variantImages,
+        };
+    });
+
+    const totalCount = products.length;
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    // Return the paginated data along with metadata
+    return {
+        products: productsWithFilteredVariants,
+        totalPages,
+        currentPage,
+        pageSize,
+        totalCount,
+    };
+}
