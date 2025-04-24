@@ -6,6 +6,8 @@ import {
 } from "@prisma/client";
 import { getStoreDefaultShippingDetails } from "@/queries/store";
 
+import countries from "@/data/countries.json";
+
 export interface DashboardSidebarMenuInterface {
   label: string;
   icon: string;
@@ -61,3 +63,14 @@ export type CountryWithShippingRatesType = {
   countryName: string;
   shippingRate: ShippingRate;
 };
+
+// Country type for get user country
+export interface Country {
+  name: string;
+  code: string;
+  city: string;
+  region: string;
+}
+
+
+export type SelectMenuOption = (typeof countries)[number];

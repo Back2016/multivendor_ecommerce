@@ -7,7 +7,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 
 // Prisma model
-import {  SubCategory } from "@prisma/client";
+import { SubCategory } from "@prisma/client";
 
 
 // Function: upsertSubCategory
@@ -120,12 +120,12 @@ export const getSubCategory = async (subCategoryId: string) => {
 
     // Retrieve subCategory
     const subCategory = await db.subCategory.findUnique({
-      where: {
-        id: subCategoryId,
-      },
+        where: {
+            id: subCategoryId,
+        },
     });
     return subCategory;
-  };
+};
 
 // Function: deleteSubCategory
 // Description: Deletes a SubCategory from the database.
@@ -142,18 +142,61 @@ export const deleteSubCategory = async (subCategoryId: string) => {
 
     // Verify admin permission
     if (user.privateMetadata.role !== "ADMIN")
-      throw new Error(
-        "Unauthorized Access: Admin Privileges Required for Entry."
-      );
+        throw new Error(
+            "Unauthorized Access: Admin Privileges Required for Entry."
+        );
 
     // Ensure subCategory ID is provided
     if (!subCategoryId) throw new Error("Please provide category ID.");
 
     // Delete subCategory from the database
     const response = await db.subCategory.delete({
-      where: {
-        id: subCategoryId,
-      },
+        where: {
+            id: subCategoryId,
+        },
     });
     return response;
-  };
+};
+
+
+// Function: getSubcategories
+// Description: Retrieves subcategories from the database, with options for limiting results and random selection.
+// Parameters:
+//   - limit: Number indicating the maximum number of subcategories to retrieve.
+//   - random: Boolean indicating whether to return random subcategories.
+// Returns: List of subcategories based on the provided options.
+export const getSubcategories = async (
+    limit: number | null,
+    random: boolean = false
+): Promise<SubCategory[]> => {
+    // Define SortOrder enum
+    enum SortOrder {
+        asc = "asc",
+        desc = "desc",
+    }
+    try {
+        // Define the query options
+        const queryOptions = {
+            take: limit || undefined, // Use the provided limit or undefined for no limit
+            orderBy: random ? { createdAt: SortOrder.desc } : undefined, // Use SortOrder for ordering
+        };
+
+        // If random selection is required, use a raw query to randomize
+        if (random) {
+            const subcategories = await db.$queryRaw<SubCategory[]>`
+            SELECT * FROM SubCategory
+            ORDER BY RAND()
+            LIMIT ${limit || 10}
+            `;
+            return subcategories;
+        } else {
+            // Otherwise, fetch subcategories based on the defined query options
+            const subcategories = await db.subCategory.findMany(queryOptions);
+            return subcategories;
+        }
+    } catch (error) {
+        // Log and re-throw any errors
+        console.error("Error fetching subcategories:", error);
+        throw error;
+    }
+};

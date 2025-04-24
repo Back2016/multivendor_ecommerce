@@ -77,9 +77,14 @@ const ShippingRateDetails: FC<ShippingRateDetailsProps> = ({ data, storeUrl }) =
     // Loading status based on form submission
     const isLoading = form.formState.isSubmitting;
 
-    // Always show lastest data
+    // Always show latest data
     useEffect(() => {
         if (data?.countryId && data?.countryName) {
+
+            // Must specify here, cannot just reset(data)
+            // This issue arises because react-hook-form default values only apply to uncontrolled components at first render.
+            // But components like NumberInput from @tremor/react are controlled components,
+            // and their internal value is not controlled by react-hook-form unless you explicitly bind it.
             form.reset({
                 countryId: data.countryId,
                 countryName: data.countryName,
