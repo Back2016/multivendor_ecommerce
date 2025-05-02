@@ -58,6 +58,7 @@ import "react-calendar/dist/Calendar.css";
 import "react-clock/dist/Clock.css";
 import { format } from "date-fns";
 import { ArrowRight, Dot } from "lucide-react";
+import { NumberInput } from "@tremor/react";
 
 
 interface ProductDetailsProps {
@@ -72,7 +73,7 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, offerTags, 
 
     // Is new variant page
     const isNewVariantPage = data?.productId && !data?.variantId;
-    console.log("is new variant --> ", isNewVariantPage);
+    // console.log("is new variant --> ", isNewVariantPage);
 
     // Jodit editor refs
     const productDescEditor = useRef(null);
@@ -149,6 +150,7 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, offerTags, 
             keywords: data?.keywords || [],
             questions: data?.questions,
             isSale: data?.isSale ?? false,
+            weight: data?.weight,
             saleEndDate: data?.saleEndDate || format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
         },
     });
@@ -219,6 +221,7 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, offerTags, 
                 saleEndDate: values.saleEndDate,
                 brand: values.brand,
                 sku: values.sku,
+                weight: values.weight,
                 colors: values.colors,
                 sizes: values.sizes,
                 product_specs: values.product_specs,
@@ -736,7 +739,7 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, offerTags, 
                                     </div>
                                 </InputFieldset>
                             )}
-                            {/* Brand, Sku */}
+                            {/* Brand, Sku, weight */}
                             <InputFieldset
                                 label={isNewVariantPage ? "Sku" : "Brand, Sku"}
                             >
@@ -762,6 +765,25 @@ const ProductDetails: FC<ProductDetailsProps> = ({ data, categories, offerTags, 
                                             <FormItem className="flex-1">
                                                 <FormControl>
                                                     <Input placeholder="Product sku" {...field} disabled={isLoading} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="weight"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormControl>
+                                                    <NumberInput
+                                                        defaultValue={field.value}
+                                                        onValueChange={field.onChange}
+                                                        placeholder="Product weight"
+                                                        min={0.01}
+                                                        step={0.01}
+                                                        className="!shadow-none rounded-md !text-sm"
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

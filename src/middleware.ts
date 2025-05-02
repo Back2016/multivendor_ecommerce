@@ -25,6 +25,7 @@ export default clerkMiddleware(async (auth, req, next) => {
     // If the user has already selected a country, use that for subsequent requests
     response = NextResponse.next();
   } else {
+    // Refresh to fetch data again (for shipping etc.)
     response = NextResponse.redirect(new URL(req.url));
     // Step 2: Get the user country using the helper function
     const userCountry = await getUserCountry();

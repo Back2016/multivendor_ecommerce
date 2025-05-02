@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import ProductCardImageSwiper from "./swiper";
 import { Button } from "@/components/store/ui/button";
 import { Heart } from "lucide-react";
+import ProductPrice from "../../product-page/product-info/product-price";
 //import ProductPrice from "../../product-page/product-info/product-price";
 // import { addToWishlist } from "@/queries/user";
 // import toast from "react-hot-toast";
@@ -27,7 +28,7 @@ export default function ProductCard({ product }: { product: ProductType }) {
   //   }
   // };
 
-  // console.log(product);
+  // console.log(variantImages);
 
   return (
     <div>
@@ -42,6 +43,7 @@ export default function ProductCard({ product }: { product: ProductType }) {
         <div className="relative w-full h-full">
           <Link
             href={`/product/${slug}/${variantSlug}`}
+            // href={`/product/${slug}?variant=${variantSlug}`}
             className="w-full relative inline-block overflow-hidden"
           >
             {/* Images Swiper */}
@@ -69,6 +71,7 @@ export default function ProductCard({ product }: { product: ProductType }) {
               </div>
             )}
             {/* Price */}
+            <ProductPrice sizes={sizes} isCard handleChange={() => { }} />
             {/* <ProductPrice sizes={sizes} isCard handleChange={() => {}} /> */}
           </Link>
         </div>
@@ -83,12 +86,15 @@ export default function ProductCard({ product }: { product: ProductType }) {
           {/* Action buttons */}
           <div className="flex flex-items gap-x-1">
             <Button>
-              <Link href={`/product/${slug}/${variantSlug}`}>Add to cart</Link>
+              <Link
+                // href={`/product/${slug}?variant=${variantSlug}`}
+                href={`/product/${slug}/${variantSlug}`}
+              >Add to cart</Link>
             </Button>
             <Button
               variant="black"
               size="icon"
-              // onClick={() => handleAddToWishlist()}
+            // onClick={() => handleAddToWishlist()}
             >
               <Heart className="w-5" />
             </Button>

@@ -1,6 +1,9 @@
 import { getAllSubCategories } from "@/queries/subCategory";
-import { getAllStoreProducts, getProducts } from "@/queries/product";
+import { getAllStoreProducts, getProductPageData, getProducts, getShippingDetails, retrieveProductDetails } from "@/queries/product";
 import {
+  Color,
+  FreeShipping,
+  FreeShippingCountry,
   Prisma,
   ProductVariantImage,
   ShippingRate,
@@ -39,6 +42,7 @@ export type ProductWithVariantType = {
   saleEndDate?: string,
   brand: string;
   sku: string;
+  weight: number;
   colors: { color: string }[];
   sizes: { size: string; quantity: number; price: number; discount?: number }[];
   product_specs: { id?: string; name: string; value: string }[];
@@ -92,4 +96,54 @@ export type VariantSimplified = {
 export type VariantImageType = {
   url: string;
   image: string;
+};
+
+export type ProductPageType = Prisma.PromiseReturnType<
+  typeof retrieveProductDetails
+>;
+
+export type ProductPageDataType = Prisma.PromiseReturnType<
+  typeof getProductPageData
+>;
+
+export type CartProductType = {
+  productId: string;
+  variantId: string;
+  productSlug: string;
+  variantSlug: string;
+  name: string;
+  variantName: string;
+  image: string;
+  variantImage: string;
+  sizeId: string;
+  size: string;
+  quantity: number;
+  price: number;
+  stock: number;
+  weight: number;
+  shippingMethod: string;
+  shippingService: string;
+  shippingFee: number;
+  extraShippingFee: number;
+  deliveryTimeMin: number;
+  deliveryTimeMax: number;
+  isFreeShipping: boolean;
+};
+
+export type VariantInfoType = {
+  variantName: string;
+  variantSlug: string;
+  variantImage: string;
+  variantUrl: string;
+  images: ProductVariantImage[];
+  sizes: Size[];
+  colors: Partial<Color>[];
+};
+
+export type ProductShippingDetailsType = Prisma.PromiseReturnType<
+  typeof getShippingDetails
+>;
+
+export type FreeShippingWithCountriesType = FreeShipping & {
+  eligibleCountries: FreeShippingCountry[];
 };

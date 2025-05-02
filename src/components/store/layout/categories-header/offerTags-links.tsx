@@ -46,7 +46,7 @@ export default function OfferTagsLinks({
                         className={cn(
                             "font-bold text-center text-white px-4 leading-10 rounded-[20px] hover:bg-[#ffffff33]",
                             {
-                                "text-[var(--orange-background)]": i === 0,
+                                "text-orange-300": i === 0,
                             }
                         )}
                     >

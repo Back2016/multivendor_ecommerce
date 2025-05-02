@@ -4,7 +4,8 @@
 import { db } from "@/lib/db";
 
 // Types
-import { ProductWithVariantType, VariantImageType, VariantSimplified } from "@/lib/types";
+import { FreeShippingWithCountriesType, ProductPageType, ProductShippingDetailsType, ProductWithVariantType, VariantImageType, VariantSimplified } from "@/lib/types";
+import { Store } from "@prisma/client";
 
 // Clerk
 import { currentUser } from "@clerk/nextjs/server";
@@ -12,6 +13,12 @@ import { currentUser } from "@clerk/nextjs/server";
 // Slugify
 import slugify from "slugify";
 import { generateUniqueSlug } from "@/lib/utils";
+
+// Cookies
+import { getCookie } from "cookies-next";
+import { cookies } from "next/headers";
+import { setMaxListeners } from "events";
+
 
 
 // Function: upsertProduct
@@ -52,7 +59,7 @@ export const upsertProduct = async (
             where: { id: product.productId },
         });
 
-        // // Check if the variant already exists
+        // Check if the variant already exists
         // const existingVariant = await db.productVariant.findUnique({
         //     where: { id: product.variantId },
         // });
@@ -109,6 +116,7 @@ export const upsertProduct = async (
             isSale: product.isSale,
             saleEndDate: product.isSale ? product.saleEndDate : "",
             sku: product.sku,
+            weight: product.weight,
             keywords: product.keywords.join(","),
             images: {
                 create: product.images.map((img) => ({
@@ -298,9 +306,48 @@ export const getProducts = async (
     const skip = (currentPage - 1) * limit; // How many products to skip (in previous pages), prisma take in skip in findMany
 
     // Construct the base query
-    const wherClause: any = {
+    const whereClause: any = {
         AND: [],
     };
+
+    // Apply store filter (using store URL)
+    if (filters.store) {
+        const store = await db.store.findUnique({
+            where: {
+                url: filters.store,
+            },
+            select: { id: true },
+        });
+        if (store) {
+            whereClause.AND.push({ storeId: store.id });
+        }
+    }
+
+    // Apply category filter (using category URL)
+    if (filters.category) {
+        const category = await db.category.findUnique({
+            where: {
+                url: filters.category,
+            },
+            select: { id: true },
+        });
+        if (category) {
+            whereClause.AND.push({ categoryId: category.id });
+        }
+    }
+
+    // Apply subCategory filter (using subCategory URL)
+    if (filters.subCategory) {
+        const subCategory = await db.subCategory.findUnique({
+            where: {
+                url: filters.subCategory,
+            },
+            select: { id: true },
+        });
+        if (subCategory) {
+            whereClause.AND.push({ subCategoryId: subCategory.id });
+        }
+    }
 
     // Define the sort order
     // let orderBy: Record<string, SortOrder> = {};
@@ -320,7 +367,7 @@ export const getProducts = async (
 
     // Get all filtered, sorted products
     const products = await db.product.findMany({
-        where: wherClause,
+        where: whereClause,
         // orderBy,
         take: limit, // Limit to page size
         skip: skip, // Skip the products of previous pages
@@ -386,3 +433,348 @@ export const getProducts = async (
         totalCount,
     };
 }
+
+
+// Function: getProductPageData
+// Description: Retrieves details of a specific product variant from the database.
+// Access Level: Public
+// Parameters:
+//   - productSlug: The slug of the product to which the variant belongs.
+//   - variantSlug: The slug of the variant to be retrieved.
+// Returns: Details of the requested product variant.
+export const getProductPageData = async (
+    productSlug: string,
+    variantSlug: string,
+) => {
+    // Retrieve product variant details from the database
+    const product = await retrieveProductDetails(productSlug, variantSlug);
+    if (!product) return;
+
+    // Retrieve user country
+    const userCountry = await getUserCountry();
+
+    // Calculate and retrieve the shipping details
+    const productShippingDetails = await getShippingDetails(
+        product.shippingFeeMethod,
+        userCountry,
+        product.store,
+        product.freeShipping
+    );
+
+    // console.log(productShippingDetails);
+
+    return formatProductResponse(
+        product,
+        productShippingDetails,
+    );
+}
+//----------------------------------------//
+// Helper functions for getProductPageData
+export const retrieveProductDetails = async (
+    productSlug: string,
+    variantSlug: string,
+) => {
+    const product = await db.product.findUnique({
+        where: {
+            slug: productSlug,
+        },
+        include: {
+            category: true,
+            subCategory: true,
+            offerTag: true,
+            store: true,
+            specs: true,
+            questions: true,
+            freeShipping: {
+                include: {
+                    eligibleCountries: true,
+                }
+            },
+            variants: {
+                where: {
+                    slug: variantSlug,
+                },
+                include: {
+                    images: true,
+                    colors: true,
+                    sizes: true,
+                    specs: true,
+                }
+            },
+        },
+    });
+
+    if (!product) return null;
+    // Get variants info
+    const variantsInfo = await db.productVariant.findMany({
+        where: {
+            productId: product.id,
+        },
+        include: {
+            images: true,
+            sizes: true,
+            colors: true,
+            product: {
+                select: { slug: true },
+            },
+        },
+    });
+
+    return {
+        ...product,
+        variantsInfo: variantsInfo.map((variant) => ({
+            variantName: variant.variantName,
+            variantSlug: variant.slug,
+            variantImage: variant.variantImage,
+            variantUrl: `/product/${productSlug}/${variant.slug}`,
+            images: variant.images,
+            sizes: variant.sizes,
+            colors: variant.colors,
+        })),
+    };
+};
+
+const formatProductResponse = (product: ProductPageType, shippingDetails: ProductShippingDetailsType,) => {
+    if (!product) return;
+    const variant = product.variants[0];
+    const { store, category, subCategory, offerTag, questions } = product;
+    const { images, colors, sizes } = variant;
+
+    return {
+        productId: product.id,
+        variantId: variant.id,
+        productSlug: product.slug,
+        variantSlug: variant.slug,
+        name: product.name,
+        description: product.description,
+        variantName: variant.variantName,
+        variantDescription: variant.variantDescription,
+        images,
+        category,
+        subCategory,
+        offerTag,
+        isSale: variant.isSale,
+        saleEndDate: variant.saleEndDate,
+        brand: product.brand,
+        sku: variant.sku,
+        weight: variant.weight,
+        variantImage: variant.variantImage,
+        store: {
+            id: store.id,
+            url: store.url,
+            name: store.name,
+            logo: store.logo,
+            followersCount: 10, // Need to be added
+            isUserFollowingStore: true, // Need to be added
+        },
+        colors,
+        sizes,
+        specs: {
+            product: product.specs,
+            variant: variant.specs,
+        },
+        questions,
+        rating: product.rating,
+        reviews: [],
+        numReviews: 122,
+        reviewsStatistics: {
+            ratingStatistics: [],
+            reviewsWithImagesCount: 5,
+        },
+        shippingDetails,
+        relatedProducts: [],
+        variantInfo: product.variantsInfo,
+    };
+};
+
+const getUserCountry = async () => {
+    const userCountryCookie = await getCookie("userCountry", { cookies }) || "";
+    const defaultCountry = { name: "United States", code: "US" };
+
+    try {
+        const parsedCountry = JSON.parse(userCountryCookie);
+        if (
+            parsedCountry &&
+            typeof parsedCountry === "object" &&
+            "name" in parsedCountry &&
+            "code" in parsedCountry
+        ) {
+            return parsedCountry;
+        }
+        return defaultCountry;
+    } catch (error) {
+        console.error("Failed to parse userCountryCookie", error);
+    }
+};
+
+// Function: getProductVariant
+// Description: Retrieves details of a specific product variant from the database.
+// Access Level: Public
+// Parameters:
+//   - productId: The id of the product to which the variant belongs.
+//   - variantId: The id of the variant to be retrieved.
+// Returns: Details of the requested product variant.
+export const getProductVariant = async (
+    productId: string,
+    variantId: string
+) => {
+    // Retrieve product variant details from the database
+    const product = await db.product.findUnique({
+        where: {
+            id: productId,
+        },
+        include: {
+            category: true,
+            subCategory: true,
+            variants: {
+                where: {
+                    id: variantId,
+                },
+                include: {
+                    images: true,
+                    colors: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                    sizes: {
+                        select: {
+                            size: true,
+                            quantity: true,
+                            price: true,
+                            discount: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+    if (!product) return;
+    return {
+        productId: product?.id,
+        variantId: product?.variants[0].id,
+        name: product.name,
+        description: product?.description,
+        variantName: product.variants[0].variantName,
+        variantDescription: product.variants[0].variantDescription,
+        images: product.variants[0].images,
+        categoryId: product.categoryId,
+        subCategoryId: product.subCategoryId,
+        isSale: product.variants[0].isSale,
+        brand: product.brand,
+        sku: product.variants[0].sku,
+        colors: product.variants[0].colors,
+        sizes: product.variants[0].sizes,
+        keywords: product.variants[0].keywords.split(","),
+    };
+};
+
+// Function: getShippingDetails
+// Description: Retrieves and calculates shipping details based on user country and product.
+// Access Level: Public
+// Parameters:
+//   - shippingFeeMethod: The shipping fee method of the product.
+//   - userCountry: The parsed user country object from cookies.
+//   - store :  store details.
+// Returns: Calculated shipping details.
+export const getShippingDetails = async (
+    shippingFeeMethod: string,
+    userCountry: { name: string; code: string; city: string },
+    store: Store,
+    freeShipping: FreeShippingWithCountriesType | null
+) => {
+    let shippingDetails = {
+        shippingFeeMethod,
+        shippingService: "",
+        shippingFee: 0,
+        extraShippingFee: 0,
+        deliveryTimeMin: 0,
+        deliveryTimeMax: 0,
+        returnPolicy: "",
+        countryCode: userCountry.code,
+        countryName: userCountry.name,
+        city: userCountry.city,
+        isFreeShipping: false,
+    };
+    const country = await db.country.findUnique({
+        where: {
+            name: userCountry.name,
+            code: userCountry.code,
+        },
+    });
+
+    if (country) {
+        // Retrieve shipping rate for the country
+        const shippingRate = await db.shippingRate.findFirst({
+            where: {
+                countryId: country.id,
+                storeId: store.id,
+            },
+        });
+
+        const returnPolicy = shippingRate?.returnPolicy || store.returnPolicy;
+        const shippingService =
+            shippingRate?.shippingService || store.defaultShippingService;
+        const shippingFeePerItem =
+            shippingRate?.shippingFeePerItem || store.defaultShippingFeePerItem;
+        const shippingFeeForAdditionalItem =
+            shippingRate?.shippingFeeForAdditionalItem ||
+            store.defaultShippingFeeForAdditionalItem;
+        const shippingFeePerKg =
+            shippingRate?.shippingFeePerKg || store.defaultShippingFeePerKg;
+        const shippingFeeFixed =
+            shippingRate?.shippingFeeFixed || store.defaultShippingFeeFixed;
+        const deliveryTimeMin =
+            shippingRate?.deliveryTimeMin || store.defaultDeliveryTimeMin;
+        const deliveryTimeMax =
+            shippingRate?.deliveryTimeMax || store.defaultDeliveryTimeMax;
+
+        // Check for free shipping
+        if (freeShipping) {
+            const free_shipping_countries = freeShipping.eligibleCountries;
+            const check_free_shipping = free_shipping_countries.find(
+                (c) => c.countryId === country.id
+            );
+            if (check_free_shipping) {
+                shippingDetails.isFreeShipping = true;
+            }
+        }
+        shippingDetails = {
+            shippingFeeMethod,
+            shippingService: shippingService,
+            shippingFee: 0,
+            extraShippingFee: 0,
+            deliveryTimeMin,
+            deliveryTimeMax,
+            returnPolicy,
+            countryCode: userCountry.code,
+            countryName: userCountry.name,
+            city: userCountry.city,
+            isFreeShipping: shippingDetails.isFreeShipping,
+        };
+
+        const { isFreeShipping } = shippingDetails;
+        switch (shippingFeeMethod) {
+            case "ITEM":
+                shippingDetails.shippingFee = isFreeShipping ? 0 : shippingFeePerItem;
+                shippingDetails.extraShippingFee = isFreeShipping
+                    ? 0
+                    : shippingFeeForAdditionalItem;
+                break;
+
+            case "WEIGHT":
+                shippingDetails.shippingFee = isFreeShipping ? 0 : shippingFeePerKg;
+                break;
+
+            case "FIXED":
+                shippingDetails.shippingFee = isFreeShipping ? 0 : shippingFeeFixed;
+                break;
+
+            default:
+                break;
+        }
+
+        return shippingDetails;
+    }
+    return false;
+};

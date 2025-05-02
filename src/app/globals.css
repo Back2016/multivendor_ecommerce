@@ -127,6 +127,13 @@
 
   --usermenu-text: #222;
   --white: #ffffff;
+
+  --border-main-primary: #191919;
+}
+
+/* optional: utility class if not using Tailwind for transition */
+.ease-bezier-1 {
+  transition-timing-function: var(--bezier-1);
 }
 
 .dark {

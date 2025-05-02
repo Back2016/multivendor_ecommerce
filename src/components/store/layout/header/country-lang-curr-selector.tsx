@@ -112,7 +112,7 @@ export default function CountryLanguageCurrencySelector({
                 <div className="mt-4 leading-6 text-[20px] font-bold">
                   Language
                 </div>
-                <div className="relative mt-2.5 h-10 py-0 px-3 border-[1px] border-black/20 rounded-lg  flex items-center cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="relative mt-2.5 h-10 py-0 px-3 border-[1px] border-black/20 rounded-lg  bg-gray-200 flex items-center cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap">
                   <div className="align-middle">English (*demo project)</div>
                   <span className="absolute right-2">
                     <ChevronDown className="text-[var(--main-primary)] scale-75" />
@@ -123,7 +123,7 @@ export default function CountryLanguageCurrencySelector({
                 <div className="mt-4 leading-6 text-[20px] font-bold">
                   Currency
                 </div>
-                <div className="relative mt-2 h-10 py-0 px-3 border-[1px] border-black/20 rounded-lg  flex items-center cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="relative mt-2 h-10 py-0 px-3 border-[1px] border-black/20 rounded-lg  bg-gray-200 flex items-center cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap">
                   <div className="align-middle">USD (*demo project) </div>
                   <span className="absolute right-2">
                     <ChevronDown className="text-[var(--main-primary)] scale-75" />

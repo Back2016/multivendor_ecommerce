@@ -17,6 +17,20 @@ const VariantSwitcher: FC<Props> = ({
   setVariant,
   selectedVariant,
 }) => {
+  // console.log("variantSwitcher", images);
+  // Never directly mutate props!
+  const updatedImages = images.map((img) => {
+    const slugs = img.url.split("/product/")[1];
+    const productSlug = slugs ? slugs.split("/")[0] : "";
+    const variantSlug = slugs ? slugs.split("/")[1] : "";
+
+    return {
+      ...img,
+      url: `/product/${productSlug}?variant=${variantSlug}`,
+    };
+  });
+  // console.log("variantSwitcher Updated", updatedImages);
+
   return (
     <div>
       {images.length > 1 && (
